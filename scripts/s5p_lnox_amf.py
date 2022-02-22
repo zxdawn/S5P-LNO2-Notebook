@@ -5,6 +5,7 @@ Copied from Xin Zhang's another repository:
 
 import logging
 import scipy
+import pandas as pd
 import numpy as np
 import xarray as xr
 
@@ -394,7 +395,7 @@ def cal_amf(s5p, interp_ds, bAmfClr, bAmfCld):
     no2TropVis = no2Trop.rename('no2TropVis')
 
     # read attributes table
-    df_attrs = pd.read_csv('attrs_table.csv',
+    df_attrs = pd.read_csv('../scripts/attrs_table.csv',
                            sep=' *, *',  # delete spaces
                            engine="python"
                            ).set_index('name')
