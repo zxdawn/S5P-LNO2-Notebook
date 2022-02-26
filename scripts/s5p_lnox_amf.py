@@ -194,6 +194,25 @@ def assign_attrs(da, df_attrs):
                            )
 
 
+def scene_mode(s5p):
+    '''The scene mode is turned on for two situations:
+
+    1. cloud fractions > 1.0
+    2. snow_ice_flag > 5
+
+    Scene mode: the cloud fraction is set to 1
+                the cloud albedo is set to the scene albedo
+                and the cloud pressure is set to the scene pressure.
+    '''
+
+    mask = (s5p['snow_ice_flag'] > 5) | (s5p['cloud_fraction_crb_nitrogendioxide_window'] > 1)
+
+    s5p['cloud_fraction_crb_nitrogendioxide_window']  = xr.where(mask, 1, s5p['cloud_fraction_crb_nitrogendioxide_window'])
+    s5p['cloud_radiance_fraction_nitrogendioxide_window'] = xr.where(mask, 1, s5p['cloud_radiance_fraction_nitrogendioxide_window'])
+    s5p['cloud_pressure_crb'] = xr.where(mask, s5p['apparent_scene_pressure'], s5p['cloud_pressure_crb'])
+    s5p['cloud_albedo_crb'] = xr.where(mask, s5p['scene_albedo'], s5p['cloud_albedo_crb'])
+
+
 def cal_bamf(s5p, lut):
     '''Calculate the Box-AMFs based on the LUT file
     Args:
@@ -211,6 +230,12 @@ def cal_bamf(s5p, lut):
     logging.info(' '*4 + 'Calculating box-AMFs using LUT ...')
 
     new_dim = ['y', 'x']
+
+    # bak up the original s5p
+    s5p_origin = s5p.copy()
+
+    # check whether switch to scene mode for each pixels
+    scene_mode(s5p)
 
     # get vars from s5p data
     albedo = xr.DataArray(s5p['surface_albedo_nitrogendioxide_window'],
@@ -283,10 +308,10 @@ def cal_bamf(s5p, lut):
 
     logging.info(' '*8 + 'Finish calculating box-AMFs')
 
-    return bAmfClr, bAmfCld, [albedo, p_surface, cloud_albedo, p_cloud, dphi, mu0, mu]
+    return s5p_origin, bAmfClr, bAmfCld, [albedo, p_surface, cloud_albedo, p_cloud, dphi, mu0, mu]
 
 
-def cal_amf(s5p, interp_ds, bAmfClr, bAmfCld):
+def cal_amf(s5p, s5p_origin, interp_ds, bAmfClr, bAmfCld):
     '''Calculate AMFs'''
     logging.info(' '*4 + 'Calculating AMFs based on box-AMFs ...')
 
@@ -388,6 +413,12 @@ def cal_amf(s5p, interp_ds, bAmfClr, bAmfCld):
     scdTrop = s5p['nitrogendioxide_tropospheric_column'] * s5p['air_mass_factor_troposphere']
     no2Trop = scdTrop / amf
     no2TropVis = scdTrop / amfVis
+
+    # set the variables changed by scene mode to original values
+    s5p['cloud_fraction_crb_nitrogendioxide_window'] = s5p_origin['cloud_fraction_crb_nitrogendioxide_window']
+    s5p['cloud_radiance_fraction_nitrogendioxide_window'] = s5p_origin['cloud_radiance_fraction_nitrogendioxide_window']
+    s5p['cloud_pressure_crb'] = s5p_origin['cloud_pressure_crb']
+    s5p['cloud_albedo_crb'] = s5p_origin['cloud_albedo_crb']
 
     # rename DataArrays
     amf = amf.rename('amfTrop')
