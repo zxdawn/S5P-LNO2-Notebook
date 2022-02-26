@@ -1,5 +1,5 @@
 '''
-Copied from Xin Zhang's another repository:
+Modified from Xin Zhang's another repository:
     https://github.com/zxdawn/S5P-WRFChem/blob/master/main/s5p_utils.py
 '''
 
@@ -16,10 +16,14 @@ def cal_dphi(saa, vaa):
         the absolute difference between the viewing azimuth angle and
         the solar azimuth angle.
     It ranges between 0 and 180 degrees
+
+    Ref: http://stcorp.github.io/harp/doc/html/algorithms/derivations/relative_azimuth_angle.html
     '''
 
-    dphi = abs(vaa - saa)
-    dphi = xr.where(dphi <= 180, dphi, 360 - dphi)
+    delta = saa - vaa
+    delta = delta.where(delta>=0, delta+360)
+    delta = delta.where(delta<360, delta-360)
+    dphi = abs(delta-180).rename('dphi')
 
     return dphi.rename('dphi')
 
@@ -30,11 +34,12 @@ def cal_tropo(pclr, itropo):
     # get fill_values and overwrite with 0, because index array should be int.
     # Check submitted issue by Xin:
     #   https://github.com/pydata/xarray/issues/3955
+    itropo = itropo.fillna(itropo._FillValue)
     tropo_bool = itropo == itropo._FillValue
     itropo = xr.where(tropo_bool, 0, itropo)
 
     # isel with itropo
-    ptropo = pclr.isel(layer=itropo.load())
+    ptropo = pclr.isel(layer=itropo.load().astype(int))
 
     # mask data and set fill_value pixels to nan
     ptropo = xr.where(tropo_bool, np.nan, ptropo).rename('tropopause_pressure')
@@ -172,7 +177,8 @@ def integPr(no2, s5p_p, psfc, ptropo):
 
     # sum from surface (ground or cloud pressure) to tropopause
     layername = no2.dims[0]
-    vcd = subcolumn.where(sub_layer[:-1, ...].values).sum(layername, skipna=False)
+    vcd = subcolumn.where(sub_layer[:-1, ...].values).sum(layername, skipna=True)
+    vcd = vcd.where(vcd!=0)
 
     logging.debug(' '*12 + 'Finish integration')
 
@@ -188,7 +194,7 @@ def assign_attrs(da, df_attrs):
                            )
 
 
-def cal_bamf(scn, lut):
+def cal_bamf(s5p, lut):
     '''Calculate the Box-AMFs based on the LUT file
     Args:
         - albedo: Surface Albedo
@@ -206,25 +212,25 @@ def cal_bamf(scn, lut):
 
     new_dim = ['y', 'x']
 
-    # get vars from scn data
-    albedo = xr.DataArray(scn['surface_albedo_nitrogendioxide_window'],
+    # get vars from s5p data
+    albedo = xr.DataArray(s5p['surface_albedo_nitrogendioxide_window'],
                           dims=new_dim)
-    cloud_albedo = xr.DataArray(scn['cloud_albedo_crb'],
+    cloud_albedo = xr.DataArray(s5p['cloud_albedo_crb'],
                                 dims=new_dim)
 
     # use surface pressure from TROPOMI (input from ERA-Interim)
-    p_surface = xr.DataArray(scn['surface_pressure']/1e2,  # hPa
+    p_surface = xr.DataArray(s5p['surface_pressure']/1e2,  # hPa
                              dims=new_dim)
-    p_cloud = xr.DataArray(scn['cloud_pressure_crb']/1e2,  # hPa
+    p_cloud = xr.DataArray(s5p['cloud_pressure_crb']/1e2,  # hPa
                            dims=new_dim)
 
     # calculate angles
-    dphi = xr.DataArray(cal_dphi(scn['solar_azimuth_angle'],
-                                 scn['viewing_azimuth_angle']),
+    dphi = xr.DataArray(cal_dphi(s5p['solar_azimuth_angle'],
+                                 s5p['viewing_azimuth_angle']),
                         dims=new_dim)
-    mu0 = xr.DataArray(np.cos(np.deg2rad(scn['solar_zenith_angle'])),
+    mu0 = xr.DataArray(np.cos(np.deg2rad(s5p['solar_zenith_angle'])),
                        dims=new_dim)
-    mu = xr.DataArray(np.cos(np.deg2rad(scn['viewing_zenith_angle'])),
+    mu = xr.DataArray(np.cos(np.deg2rad(s5p['viewing_zenith_angle'])),
                       dims=new_dim)
 
     da = lut['amf'].assign_coords(p=np.log(lut['amf'].p), p_surface=np.log(lut['amf'].p_surface))
@@ -254,26 +260,26 @@ def cal_bamf(scn, lut):
     # interpolate to TM5 pressure levels
     bAmfClr = xr_interp(bAmfClr_p,
                         bAmfClr_p.coords['p'], 'p',
-                        np.log(scn['p'].rolling({'layer': 2}).mean()[1:, ...].load()), 'layer').transpose(
+                        np.log(s5p['p'].rolling({'layer': 2}).mean()[1:, ...].load()), 'layer').transpose(
                         'layer',
                         ...,
                         transpose_coords=False)
 
     bAmfCld = xr_interp(bAmfCld_p,
                         bAmfCld_p.coords['p'], 'p',
-                        np.log(scn['p'].rolling({'layer': 2}).mean()[1:, ...].load()), 'layer').transpose(
+                        np.log(s5p['p'].rolling({'layer': 2}).mean()[1:, ...].load()), 'layer').transpose(
                         'layer',
                         ...,
                         transpose_coords=False)
 
     # because the bAMF is normalized by amf_geo in the LUT file, we need to multiply bAMFs by amf_geo
-    bAmfClr *= scn['amf_geo']
-    bAmfCld *= scn['amf_geo']
+    bAmfClr *= s5p['amf_geo']
+    bAmfCld *= s5p['amf_geo']
 
-    # convert scn['p'] to dask array
-    scn['p'] = scn['p'].chunk({'layer': scn['p'].shape[0],
-                               'y': scn['p'].shape[1],
-                               'x': scn['p'].shape[2]})
+    # convert s5p['p'] to dask array
+    s5p['p'] = s5p['p'].chunk({'layer': s5p['p'].shape[0],
+                               'y': s5p['p'].shape[1],
+                               'x': s5p['p'].shape[2]})
 
     logging.info(' '*8 + 'Finish calculating box-AMFs')
 
