@@ -8,6 +8,10 @@ Some notebooks for [S5P-LNO2](https://github.com/zxdawn/S5P-LNO2).
 
 Spaceborne observations of lightning NO2 in the Arctic (In Review)
 
+Input data are all saved in the zenodo Dataset called [Dataset for "Spaceborne observations of lightning NO2 in the Arctic"]([10.5281/zenodo.7528871](https://doi.org/10.5281/zenodo.7528871)). [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7528872.svg)](https://doi.org/10.5281/zenodo.7528872)
+
+Users can download the compressed file, extract it in the root directory, and rename to `data`. Then, all the Jupyter Notebooks should work well.
+
 - workflow.ipynb
     - Overview of the process for selecting lightning NO2 pixels from TROPOMI (Fig. 1 and Fig. S4)
 - lightning_distribution.ipynb
