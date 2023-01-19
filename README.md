@@ -1,5 +1,7 @@
 # S5P-LNO2-Notebook
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7549879.svg)](https://doi.org/10.5281/zenodo.7549879)
+
 Some notebooks for [S5P-LNO2](https://github.com/zxdawn/S5P-LNO2).
 
 ## Figures and tables in peer-reviewed papers
