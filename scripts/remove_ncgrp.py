@@ -1,5 +1,7 @@
 '''
 Remove the "Lightning" group of NetCDF file
+
+Simpler method: ncks -O -x -C -g .?Lightning in.nc out.nc
 '''
 
 import os
