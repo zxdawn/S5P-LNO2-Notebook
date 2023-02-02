@@ -43,7 +43,8 @@ def read_dim(dimensions, varname):
 
     if varname != 'epochSeconds':
         # lon and lat
-        return np.linspace(var_list[0], var_list[1], int(var_list[2])+1)
+        resolution = (var_list[1]-var_list[0])/var_list[2]
+        return np.linspace(var_list[0]+resolution/2, var_list[1]-resolution/2,  int(var_list[2]))
     else:
         # time
         st = var_list[0]
