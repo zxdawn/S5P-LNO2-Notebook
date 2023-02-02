@@ -8,7 +8,7 @@ Some notebooks for [S5P-LNO2](https://github.com/zxdawn/S5P-LNO2).
 
 ### ES&T paper
 
-Spaceborne observations of lightning NO2 in the Arctic (In Review)
+Zhang et al., [**Spaceborne observations of lightning NO2 in the Arctic**](https://doi.org/10.1021/acs.est.2c07988), *Environ. Sci. Technol.*
 
 Input data are all saved in the zenodo Dataset called [Dataset for "Spaceborne observations of lightning NO2 in the Arctic"](https://doi.org/10.5281/zenodo.7528871). [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7528872.svg)](https://doi.org/10.5281/zenodo.7528872)
 
